@@ -1,0 +1,24 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "/Users/Ashot/Desktop/alice/arduino_code/libraries"
+		},
+		{
+			"name": "Tort",
+			"path": "/Users/Ashot/Desktop/alice/arduino_code/Tort"
+		},
+		{
+			"name": "timeMachine",
+			"path": "/Users/Ashot/Desktop/alice/arduino_code/timeMachine"
+		}
+	],
+	"settings": {
+		"terminal.integrated.env.osx": {
+			"PATH": "/Users/Ashot/.platformio/penv/bin:/Users/Ashot/.platformio/penv:/usr/local/opt/sqlite/bin:/usr/local/sbin:/usr/local/opt/openssl/bin:/usr/local/bin:/Applications/MAMP/bin/php/php5.5.3/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin",
+			"PLATFORMIO_CALLER": "vscode"
+		}
+	}
+}
