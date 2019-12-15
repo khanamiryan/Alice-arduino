@@ -1,9 +1,22 @@
 #include <Arduino.h>
 
+#include <Wire.h>
+
 void setup() {
-  // put your setup code here, to run once:
+ Serial.begin(9600); /* открываем серийный порт для дебаггинга */
+ Wire.begin(D1, D2); /* задаем i2c мост через контакты SDA=D1 и SCL=D2 на NodeMCU */
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+ Wire.beginTransmission(8); /* Начинаем передачу на адресе 8 */
+ Wire.write("Hello Arduino");  /* Отправляем "hello Arduino" */
+ Wire.endTransmission();    /* прекращаем передачу */
+
+ Wire.requestFrom(8, 1); /* запрашиваем и считываем данные с 8 и 13 адреса slave устройства */
+ while(Wire.available()){
+    int c = Wire.read();
+  Serial.print(c);
+ }
+ Serial.println();
+ delay(1000);
 }
