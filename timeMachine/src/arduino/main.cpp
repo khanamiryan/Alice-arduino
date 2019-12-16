@@ -10,7 +10,7 @@ int jamiled[6] = {41,39,43,45,35,37};
 int  startButtonPin = 46;
 int  startButtonLedPin = 47;
 int DUR = 11;//pin of dur
-
+int  lastMillis = 0;
 
 
 /**
@@ -302,6 +302,7 @@ void readButtons(){
       if(buttonLastStates[i]!=st){//knopkayi naxkin vichakn enq stugum, ete, sexmaca u naxkinum sexmac
         buttonLastStates[i] = st;  
         if(st==1){
+          lastMillis = millis();
           switch (i)
           {
           case 0:
@@ -372,14 +373,15 @@ bool checkFigures(){
   return true;
 }
 
-bool finishGame(){
+void finishGame(){
     CountDown();
 
     digitalWrite(DUR,HIGH);
+    delay(5000);
     resetGame();
     
 }
-bool gameFailed(){
+void gameFailed(){
 
 }
 void loop() {
@@ -408,6 +410,7 @@ void loop() {
     if(mainButtonLastState!=bt){
       mainButtonLastState = bt;
       if(bt==1){//sexmel en glxavor knopkayin
+            lastMillis = millis();
             bool checkd = checkDate();
             bool checkfgrs = checkFigures();
             if(checkd&&checkfgrs){
@@ -418,7 +421,11 @@ void loop() {
       }
     }
     
+    if(lastMillis+30000<millis()){
+      resetGame();
+      ScreenSaver();
 
+    }
 
 
   // for (uint8_t reader = 0; reader < NR_OF_READERS; reader++) {
