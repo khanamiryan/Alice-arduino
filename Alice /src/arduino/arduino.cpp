@@ -33,13 +33,13 @@
 #include <Wire.h>
 
 
-#define RST_PIN         8          // Configurable, see typical pin layout above
-#define SS_1_PIN        4         // Configurable, take a unused pin, only HIGH/LOW required, must be diffrent to SS 2
+#define RST_PIN         7          // Configurable, see typical pin layout above
+#define SS_1_PIN        6         // Configurable, take a unused pin, only HIGH/LOW required, must be diffrent to SS 2
 #define SS_2_PIN        5          // Configurable, take a unused pin, only HIGH/LOW required, must be diffrent to SS 1
 #define SS_3_PIN        6          // Configurable, take a unused pin, only HIGH/LOW required, must be diffrent to SS 1
 #define SS_4_PIN        7          // Configurable, take a unused pin, only HIGH/LOW required, must be diffrent to SS 1
 
-#define NR_OF_READERS   4
+#define NR_OF_READERS   1
 
 byte ssPins[] = {SS_1_PIN, SS_2_PIN,SS_3_PIN, SS_4_PIN};
 
@@ -86,6 +86,7 @@ void setup() {
 
   for (uint8_t reader = 0; reader < NR_OF_READERS; reader++) {
     mfrc522[reader].PCD_Init(ssPins[reader], RST_PIN); // Init each MFRC522 card
+    delay(10);
     Serial.print(F("Reader "));
     Serial.print(reader);
     Serial.print(F(": "));
