@@ -21,10 +21,10 @@ int  startButtonLedPin = 51;
 int DUR = 11;//pin of dur
 int  lastMillis = 0;
 
-int EthernetPin =A6;
-int EthernetReset =A7;
+int EthernetPin =15;
+int EthernetReset =14;//??karoxa petq chga
 
-
+bool screenSaverTime = true;
 int himikvaTver[6] = {1,2,3,4,5,6};
 int naxordTver[6] = {0,0,0,0,0,0};
 
@@ -40,6 +40,7 @@ int today[6] = {1,8,1,2,1,9};
 
 RFID1 rfid;//create a variable type of RFID1
 uchar serNum[5]; // array to store your ID
+
 
 const uchar rightRfids[3][5] = {//stex lcnel voroshacner@
   {74,11,92,15,18},
@@ -59,12 +60,12 @@ int RST_PIN = 29;
 int RFIDCOUNT = 3;
 int MOSIS[3] = {37,35,33};
 void checkRFID(int i){
-  EVERY_N_MILLISECONDS(500){
+  
   
   rfid.begin(IRQ_PIN,SCK_PIN,MOSI_PIN,MOSIS[i],SDA_PIN,RST_PIN);
 
-  EVERY_N_MILLISECONDS(200){
-   
+  
+   delay(100);
 
  
   rfid.init();
@@ -94,7 +95,7 @@ void checkRFID(int i){
   {
     
     memcpy(serNum, str, 5);
-    // rfid.showCardID(serNum);//show the card ID
+     ///rfid.showCardID(serNum);//show the card ID
     //  rfid.showCardID(serNum);//show the card ID
         // Serial.println();
     // for(int b=0;b<5;b++){
@@ -111,7 +112,7 @@ void checkRFID(int i){
       // Serial.println(rightRfids[i][b]);
       if(serNum[b]!=rightRfids[i][b]){
         rfidWrongTimes[i]++;
-        tone(buzzerPIN,10,1000);
+        tone(buzzerPIN,1000,1000);
         return;  
       }
         
@@ -125,15 +126,13 @@ void checkRFID(int i){
     
      
     
-    EVERY_N_MILLISECONDS(100){
+    
   
   rfid.halt(); //command the card into sleep mode 
-    }
   }
-  }
-  delay(10);
+  delay(100);
   
-  }
+  
 }
 
 
@@ -302,7 +301,8 @@ void reconnect() {
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress server(172, 16, 0, 2);
+// IPAddress server(172, 16, 0, 2);
+IPAddress server(192, 168, 0, 101);
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -342,23 +342,23 @@ void setup() {
   Serial.println("Hello");
   
 
-  // // start the Ethernet connection:
-  // Serial.println("Initialize Ethernet with DHCP:");
-  // if (Ethernet.begin(mac) == 0) {
-  //   Serial.println("Failed to configure Ethernet using DHCP");
-  // } else {
-  //   Serial.print("  DHCP assigned IP ");
-  //   Serial.println(Ethernet.localIP());
-  // }
+  // start the Ethernet connection:
+  Serial.println("Initialize Ethernet with DHCP:");
+  if (Ethernet.begin(mac) == 0) {
+    Serial.println("Failed to configure Ethernet using DHCP");
+  } else {
+    Serial.print("  DHCP assigned IP ");
+    Serial.println(Ethernet.localIP());
+  }
 
-  // client.setServer(server, 1883);
-  // client.setCallback(callback);
+   client.setServer(server, 1883);
+   client.setCallback(callback);
 
   // // Ethernet.begin(mac, ip);
-  // Ethernet.begin(mac);
+   Ethernet.begin(mac);
 
   // // start the OTEthernet library with internal (flash) based storage
-  // ArduinoOTA.begin(Ethernet.localIP(), "Arduino", "password", InternalStorage);
+   ArduinoOTA.begin(Ethernet.localIP(), "Arduino", "password", InternalStorage);
 
 }
 
@@ -456,6 +456,12 @@ void resetGame(){
     response = false;
     digitalWrite(DUR,LOW);
     resetTver();
+    screenSaverTime =  true;
+    for(int i=0;i<3;i++){
+        rfidsState[i] = 0;
+        rfidWrongTimes[i] = 0;
+    }
+    
 }
 
 
@@ -506,6 +512,7 @@ bool checkDate(){
 
 bool checkFigures(){
   for(int i=0;i<RFIDCOUNT;i++){
+      tone(buzzerPIN,100,200);
       checkRFID(i);
   }
   for(int i=0;i<RFIDCOUNT;i++){
@@ -521,7 +528,7 @@ void finishGame(){
 
     digitalWrite(DUR,HIGH);
     tone(buzzerPIN,100,200);
-  tone(buzzerPIN,1000,5000);
+    tone(buzzerPIN,1000,3000);
     delay(5000);
     resetGame();
     
@@ -529,19 +536,21 @@ void finishGame(){
 void gameFailed(){
   tone(buzzerPIN,100,200);
   tone(buzzerPIN,130,300);
+  tone(buzzerPIN,200,300);
+  tone(buzzerPIN,250,350);
 }
 void loop() {
 
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
   // if (!client.connected()) {
   //   reconnect();
   // }
   // client.loop();
 
-    EVERY_N_MILLISECONDS(500){
-   for(int i=0;i<RFIDCOUNT;i++){
-      checkRFID(i);
-    }
-    }
+    
     // EVERY_N_MILLISECONDS(500){
     //   for(int i=0;i<3;i++){
     //   Serial.print("State of ");
@@ -557,10 +566,13 @@ void loop() {
       
     // }
   
-    
+  //    for(int i=0;i<RFIDCOUNT;i++){
+  //     // tone(buzzerPIN,100,200);
+  //     checkRFID(i);
+  // }
     
 
-    ScreenSaver();
+    //ScreenSaver();
 
     
     readButtons();
@@ -582,6 +594,11 @@ void loop() {
             if(checkd&&checkfgrs){
               finishGame();
             }else{
+              if(checkd){
+                  tone(buzzerPIN,500,100);
+              }else if(checkfgrs){
+                    tone(buzzerPIN,820,100);
+              }
               gameFailed();
             }
       }
