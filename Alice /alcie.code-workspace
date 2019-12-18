@@ -13,6 +13,10 @@
 		{
 			"name": "timeMachine",
 			"path": "/Users/Ashot/Desktop/alice/arduino_code/timeMachine"
+		},
+		{
+			"name": "Arduino rfid",
+			"path": "/Users/Ashot/Desktop/alice/arduino_code/Arduino rfid"
 		}
 	],
 	"settings": {

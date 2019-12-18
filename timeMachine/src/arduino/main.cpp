@@ -2,81 +2,146 @@
 
 #include <Arduino.h>
 #include "FastLED.h"
+#include"rfid1.h"
+#include <SPI.h>
+
+#include <Ethernet2.h>
+#include <ArduinoOTA.h>
+#include <PubSubClient.h>
+
+
 
 int luyser[6] = {24,32,30,28,22,26};
 int tver[10] = {2,9,7,11,4,5,3,10,8,6};
-int jamiknopka[6] = {34,38,36,40,42,44};
-int jamiled[6] = {41,39,43,45,35,37};
-int  startButtonPin = 46;
-int  startButtonLedPin = 47;
+int jamiknopka[6] = {38,42,40,44,46,48};
+int jamiled[6] = {45,43,47,49,39,41};
+int buzzerPIN = 13;
+int  startButtonPin = 50;
+int  startButtonLedPin = 51;
 int DUR = 11;//pin of dur
 int  lastMillis = 0;
 
-
-/**
- * --------------------------------------------------------------------------------------------------------------------
- * Example sketch/program showing how to read data from more than one PICC to serial.
- * --------------------------------------------------------------------------------------------------------------------
- * This is a MFRC522 library example; for further details and other examples see: https://github.com/miguelbalboa/rfid
- *
- * Example sketch/program showing how to read data from more than one PICC (that is: a RFID Tag or Card) using a
- * MFRC522 based RFID Reader on the Arduino SPI interface.
- *
- * Warning: This may not work! Multiple devices at one SPI are difficult and cause many trouble!! Engineering skill
- *          and knowledge are required!
- *
- * @license Released into the public domain.
- *
- * Typical pin layout used:
- * -----------------------------------------------------------------------------------------
- *             MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino
- *             Reader/PCD   Uno/101       Mega      Nano v3    Leonardo/Micro   Pro Micro
- * Signal      Pin          Pin           Pin       Pin        Pin              Pin
- * -----------------------------------------------------------------------------------------
- * RST/Reset   RST          9             5         D9         RESET/ICSP-5     RST
- * SPI SS 1    SDA(SS)      ** custom, take a unused pin, only HIGH/LOW required **
- * SPI SS 2    SDA(SS)      ** custom, take a unused pin, only HIGH/LOW required **
- * SPI MOSI    MOSI         11 / ICSP-4   51        D11        ICSP-4           16
- * SPI MISO    MISO         12 / ICSP-1   50        D12        ICSP-1           14
- * SPI SCK     SCK          13 / ICSP-3   52        D13        ICSP-3           15
- *
- */
-
-// #include <SPI.h>
-// #include <MFRC522.h>
-
-// #define RST_PIN         10        // Configurable, see typical pin layout above
-// #define SS_1_PIN        23         // Configurable, take a unused pin, only HIGH/LOW required, must be diffrent to SS 2
-// #define SS_2_PIN        25          // Configurable, take a unused pin, only HIGH/LOW required, must be diffrent to SS 1
-// #define SS_3_PIN        27          // Configurable, take a unused pin, only HIGH/LOW required, must be diffrent to SS 1
-
-// #define NR_OF_READERS   1
-
-// byte ssPins[] = {SS_1_PIN, SS_2_PIN,SS_3_PIN};
-
-// MFRC522 mfrc522[NR_OF_READERS];   // Create MFRC522 instance.
+int EthernetPin =A6;
+int EthernetReset =A7;
 
 
-// /**
-//  * Helper routine to dump a byte array as hex values to Serial.
-//  */
-// void dump_byte_array(byte *buffer, byte bufferSize) {
-//   for (byte i = 0; i < bufferSize; i++) {
-//     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-//     Serial.print(buffer[i], HEX);
-//   }
-// }
 int himikvaTver[6] = {1,2,3,4,5,6};
 int naxordTver[6] = {0,0,0,0,0,0};
 
 int buttonLastStates[6] = {0,0,0,0,0,0};
 int mainButtonLastState = 0;
-
+ 
 int day = 1;
 int month = 1;
 int year = 1;
 
-int today[6] = {1,6,1,2,1,9};
+int today[6] = {1,8,1,2,1,9};
+
+
+RFID1 rfid;//create a variable type of RFID1
+uchar serNum[5]; // array to store your ID
+
+const uchar rightRfids[3][5] = {//stex lcnel voroshacner@
+  {74,11,92,15,18},
+  {201, 12, 224, 139, 174},
+  {73, 88, 174, 139, 52}};
+
+int rfidsState[3] = {0,0,0};
+int rfidWrongTimes[3] = {0,0,0};
+//rfid.begin(7, 5, 4, 3, 6, 2);     //rfid.begin(IRQ_PIN,SCK_PIN,MOSI_PIN,MISO_PIN,NSS_PIN,RST_PIN)
+int IRQ_PIN = 25;
+int SCK_PIN = 23;
+int MOSI_PIN = 27;
+//miso tarber ens
+int SDA_PIN =31;
+int RST_PIN = 29;
+
+int RFIDCOUNT = 3;
+int MOSIS[3] = {37,35,33};
+void checkRFID(int i){
+  EVERY_N_MILLISECONDS(500){
+  
+  rfid.begin(IRQ_PIN,SCK_PIN,MOSI_PIN,MOSIS[i],SDA_PIN,RST_PIN);
+
+  EVERY_N_MILLISECONDS(200){
+   
+
+ 
+  rfid.init();
+  uchar status;
+  uchar str[MAX_LEN];
+  // Search card, return card types
+  status = rfid.request(PICC_REQIDL, str);
+  if(rfidWrongTimes[i]>3&&rfidsState[i]==1){
+        rfidsState[i]=0;
+        tone(buzzerPIN,300,500);
+  }
+  if (status != MI_OK)
+  {
+    // Serial.print ("not ok ");
+    // Serial.print (i);
+    // Serial.print ("  - ");
+    // Serial.println(status);
+    rfidWrongTimes[i]++;
+    return;
+  }
+  // Show card type
+  // rfid.showCardType(str);
+  //Prevent conflict, return the 4 bytes Serial number of the card
+  status = rfid.anticoll(str);
+  
+  if (status == MI_OK)
+  {
+    
+    memcpy(serNum, str, 5);
+    // rfid.showCardID(serNum);//show the card ID
+    //  rfid.showCardID(serNum);//show the card ID
+        // Serial.println();
+    // for(int b=0;b<5;b++){
+    //     Serial.print(serNum[b]);
+    //     Serial.print(", ");
+    // } 
+    // Serial.println();
+    for(int b=0;b<5;b++){
+      // Serial.println();
+      // Serial.print(i);
+      // Serial.print(" ");
+      // Serial.print(serNum[b]);
+      // Serial.print( " with ");
+      // Serial.println(rightRfids[i][b]);
+      if(serNum[b]!=rightRfids[i][b]){
+        rfidWrongTimes[i]++;
+        tone(buzzerPIN,10,1000);
+        return;  
+      }
+        
+    }
+    if(rfidsState[i]==0){
+      tone(buzzerPIN,1000,1000);
+      rfidsState[i] = 1;
+      rfidWrongTimes[i]=0;//reset enq anum qani sxal angama exel
+    }
+    // Serial.println("Right Card");
+    
+     
+    
+    EVERY_N_MILLISECONDS(100){
+  
+  rfid.halt(); //command the card into sleep mode 
+    }
+  }
+  }
+  delay(10);
+  
+  }
+}
+
+
+void resetTver(){
+  for(int i=0;i<6;i++){
+    himikvaTver[i] = 0;
+  }
+}
 
 void displayDigits(){
   
@@ -91,7 +156,7 @@ void displayDigits(){
      for(int x=0;x<6;x++){
         digitalWrite(tver[himikvaTver[x]],HIGH);
         digitalWrite(luyser[x],HIGH);
-        delay(2);
+        delay(1);
         digitalWrite(tver[himikvaTver[x]],LOW);
         digitalWrite(luyser[x],LOW);
         delay(1);
@@ -197,6 +262,7 @@ void ScreenSaver()
           while(CheckButtons());
           
           SetLEDs(0);
+          resetTver();
           
           response = true;
         }
@@ -207,20 +273,55 @@ void ScreenSaver()
 }
 
 
+
+EthernetClient ethClient;
+PubSubClient client(ethClient);
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (client.connect("arduinoClient")) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("outTopic","hello world");
+      // ... and resubscribe
+      client.subscribe("inTopic");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+
+// Enter a MAC address for your controller below.
+// Newer Ethernet shields have a MAC address printed on a sticker on the shield
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+IPAddress server(172, 16, 0, 2);
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i=0;i<length;i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+}
+
+
 void setup() {
 
   Serial.begin(9600); // Initialize serial communications with the PC
   while (!Serial);    // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
 
-  // SPI.begin();        // Init SPI bus
 
-  // for (uint8_t reader = 0; reader < NR_OF_READERS; reader++) {
-  //   mfrc522[reader].PCD_Init(ssPins[reader], RST_PIN); // Init each MFRC522 card
-  //   Serial.print(F("Reader "));
-  //   Serial.print(reader);
-  //   Serial.print(F(": "));
-  //   mfrc522[reader].PCD_DumpVersionToSerial();
-  // }
+
   for(int i=0;i<6;i++){
     pinMode(luyser[i],OUTPUT);
   }
@@ -241,16 +342,32 @@ void setup() {
   Serial.println("Hello");
   
 
+  // // start the Ethernet connection:
+  // Serial.println("Initialize Ethernet with DHCP:");
+  // if (Ethernet.begin(mac) == 0) {
+  //   Serial.println("Failed to configure Ethernet using DHCP");
+  // } else {
+  //   Serial.print("  DHCP assigned IP ");
+  //   Serial.println(Ethernet.localIP());
+  // }
+
+  // client.setServer(server, 1883);
+  // client.setCallback(callback);
+
+  // // Ethernet.begin(mac, ip);
+  // Ethernet.begin(mac);
+
+  // // start the OTEthernet library with internal (flash) based storage
+  // ArduinoOTA.begin(Ethernet.localIP(), "Arduino", "password", InternalStorage);
+
 }
 
 void dayDown(){
-  
   if(day<=1){
     day=31;
   }else{
     day--;
   }
-
 }
 void dayUp(){
   
@@ -338,6 +455,7 @@ void readButtons(){
 void resetGame(){
     response = false;
     digitalWrite(DUR,LOW);
+    resetTver();
 }
 
 
@@ -349,10 +467,26 @@ void CountDown()
 {
   for (int i=1;i<10;i++)
   {
+    //  
+    //apagauym nayel timingov
+     //int i=1;
+    // EVERY_N_MILLISECONDS_I( timingObj, i ) { 
+    //     SetLEDs(255);
+    //     delay(800/i);
+    //     SetLEDs(0);
+    //     delay(800/i);
+    //     tone(buzzerPIN,1000,300);
+    //     i++;
+    // }
+    // timingObj.setPeriod(i);
+    
+
     SetLEDs(255);
+    tone(buzzerPIN,200*i,400/i);
     delay(800/i);
     SetLEDs(0);
     delay(800/i);
+    
   }
   
   delay(500);
@@ -368,8 +502,17 @@ bool checkDate(){
   }
   return true;
 }
-bool checkFigures(){
 
+
+bool checkFigures(){
+  for(int i=0;i<RFIDCOUNT;i++){
+      checkRFID(i);
+  }
+  for(int i=0;i<RFIDCOUNT;i++){
+    if(rfidsState[i]!=1){
+      return false;
+    }
+  }
   return true;
 }
 
@@ -377,20 +520,43 @@ void finishGame(){
     CountDown();
 
     digitalWrite(DUR,HIGH);
+    tone(buzzerPIN,100,200);
+  tone(buzzerPIN,1000,5000);
     delay(5000);
     resetGame();
     
 }
 void gameFailed(){
-
+  tone(buzzerPIN,100,200);
+  tone(buzzerPIN,130,300);
 }
 void loop() {
 
-    
+  // if (!client.connected()) {
+  //   reconnect();
+  // }
+  // client.loop();
 
-        // for(int x=0;x<6;x++){
-        //   digitalWrite(luyser[x],LOW);
-        // }
+    EVERY_N_MILLISECONDS(500){
+   for(int i=0;i<RFIDCOUNT;i++){
+      checkRFID(i);
+    }
+    }
+    // EVERY_N_MILLISECONDS(500){
+    //   for(int i=0;i<3;i++){
+    //   Serial.print("State of ");
+    //   Serial.print(i);
+    //   Serial.print(" - ");
+    //   Serial.println(rfidsState[i]);
+    //   Serial.print("wrong time ");
+    //   Serial.println(rfidWrongTimes[i]);
+    //   Serial.println();
+    //   Serial.println();
+      
+    //   }
+      
+    // }
+  
     
     
 
@@ -421,7 +587,7 @@ void loop() {
       }
     }
     
-    if(lastMillis+30000<millis()){
+    if(lastMillis+30000000<millis()){
       resetGame();
       ScreenSaver();
 

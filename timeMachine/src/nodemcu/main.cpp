@@ -3,9 +3,13 @@
 */
 #include <Arduino.h>
 
+//miso sev sev d6
+// mosi spitak korichnevi d7
+//sck kapuyt karmir d5
+
 #include <ESP8266WiFi.h>
-#define SS_PIN D4  //D2
-#define RST_PIN D3 //D1
+#define SS_PIN D2  //D2
+#define RST_PIN D1 //D1
 
 #include <SPI.h>
 #include <MFRC522.h>
