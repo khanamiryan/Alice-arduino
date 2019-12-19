@@ -1,4 +1,5 @@
 #include <Arduino.h>
+
 #include "FastLED.h"
 
 /*******************************************
@@ -25,19 +26,20 @@ void setup()
   //rfid.begin(7, 5, 4, 3, 6, 2);     //rfid.begin(IRQ_PIN,SCK_PIN,MOSI_PIN,MISO_PIN,NSS_PIN,RST_PIN)
   //delay(100);//delay 1s
   //rfid.init(); //initialize the RFID
-  pinMode(11,OUTPUT);
+  pinMode(9,OUTPUT);
   Serial.print("hello");
-  tone(11,200,500);
+  tone(9,200,500);
+  
 }
 int IRQ_PIN = A1;
-int SCK_PIN = A0;
-int MOSI_PIN = A2;
+int SCK_PIN = 13;
+int MOSI_PIN = 11;
 //miso tarber ens
-int SDA_PIN = 2;
-int RST_PIN = A3;
-int MISOS[8] = {3,4,5,6,7,8,9,10};
-int buzzer=11;
-int states[8] = {0,0,0,0,0,0,0,0};
+int SDA_PIN = 12;
+int RST_PIN = 10;
+int MISOS[4] = {4,5,6,7};
+int buzzer=9;
+int states[4] = {0,0,0,0};
 void checkRFID(int i){
   
   
@@ -70,7 +72,7 @@ void checkRFID(int i){
   status = rfid.request(PICC_REQIDL, str);
   if (status != MI_OK)
   {
-    Serial.print("nok");
+  
     states[i]=0;
     return;
   }
@@ -82,7 +84,7 @@ void checkRFID(int i){
   {
     Serial.print("Card ");
     Serial.println(i);
-     tone(buzzer,1000,1000);
+     tone(9,200,500);
     memcpy(serNum, str, 5);
     rfid.showCardID(serNum);//show the card ID
      for(int b=0;b<5;b++){
@@ -99,11 +101,11 @@ void checkRFID(int i){
 
 void loop()
 {
-  for(int i=0;i<8;i++){
+  for(int i=0;i<4;i++){
   checkRFID(i);  
   }
   EVERY_N_SECONDS(5){
-    for(int i=0;i<8;i++){
+    for(int i=0;i<4;i++){
       Serial.print("device ");
       Serial.print(i);
       Serial.print(" ");

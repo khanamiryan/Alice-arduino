@@ -16,8 +16,8 @@ int tver[10] = {2,9,7,11,4,5,3,10,8,6};
 int jamiknopka[6] = {38,42,40,44,46,48};
 int jamiled[6] = {45,43,47,49,39,41};
 int buzzerPIN = 13;
-int  startButtonPin = 50;
-int  startButtonLedPin = 51;
+int  startButtonPin = A8;
+int  startButtonLedPin = A11;
 int DUR = 11;//pin of dur
 int  lastMillis = 0;
 
@@ -25,7 +25,7 @@ int EthernetPin =15;
 int EthernetReset =14;//??karoxa petq chga
 
 bool screenSaverTime = true;
-int himikvaTver[6] = {1,2,3,4,5,6};
+int himikvaTver[6] = {1,1,1,1,1,1};
 int naxordTver[6] = {0,0,0,0,0,0};
 
 int buttonLastStates[6] = {0,0,0,0,0,0};
@@ -37,6 +37,16 @@ int year = 1;
 
 int today[6] = {1,8,1,2,1,9};
 
+void clientLoop();
+EthernetClient ethClient;
+PubSubClient client(ethClient);
+String clientID = "timeMachine";
+String  _myStatus = "standby";
+String oldStatus = _myStatus;
+void statusCallback(String newStatus);
+void sendMyStatus();
+
+bool callbackAlready;
 
 RFID1 rfid;//create a variable type of RFID1
 uchar serNum[5]; // array to store your ID
@@ -79,10 +89,6 @@ void checkRFID(int i){
   }
   if (status != MI_OK)
   {
-    // Serial.print ("not ok ");
-    // Serial.print (i);
-    // Serial.print ("  - ");
-    // Serial.println(status);
     rfidWrongTimes[i]++;
     return;
   }
@@ -98,10 +104,11 @@ void checkRFID(int i){
      ///rfid.showCardID(serNum);//show the card ID
     //  rfid.showCardID(serNum);//show the card ID
         // Serial.println();
-    // for(int b=0;b<5;b++){
-    //     Serial.print(serNum[b]);
-    //     Serial.print(", ");
-    // } 
+    for(int b=0;b<5;b++){
+        Serial.print(serNum[b]);
+        Serial.print(", ");
+    } 
+    Serial.println();
     // Serial.println();
     for(int b=0;b<5;b++){
       // Serial.println();
@@ -138,7 +145,7 @@ void checkRFID(int i){
 
 void resetTver(){
   for(int i=0;i<6;i++){
-    himikvaTver[i] = 0;
+    himikvaTver[i] = 1;
   }
 }
 
@@ -151,7 +158,7 @@ void displayDigits(){
             digitalWrite(luyser[x],LOW);
         }
         delay(1);
-      int n = 0;
+      //int n = 0;
      for(int x=0;x<6;x++){
         digitalWrite(tver[himikvaTver[x]],HIGH);
         digitalWrite(luyser[x],HIGH);
@@ -159,7 +166,7 @@ void displayDigits(){
         digitalWrite(tver[himikvaTver[x]],LOW);
         digitalWrite(luyser[x],LOW);
         delay(1);
-        n = x;
+        // n = x;
         
         
      }
@@ -237,9 +244,11 @@ void ScreenSaver()
   // int screenSaver = random(3);
   
   
-  while (!response)
+  if (_myStatus=="standby")
   {
-    EVERY_N_MILLISECONDS(500){
+    
+    
+    EVERY_N_MILLISECONDS(350){
       for(int i=0;i<6;i++){
         himikvaTver[i] = random(9);
       }
@@ -248,6 +257,7 @@ void ScreenSaver()
     {
       int rand = random(256);
       displayDigits();
+      clientLoop();
       for (int loop = 0; loop<10; loop++)
       {   
         if (!CheckButtons())
@@ -258,12 +268,12 @@ void ScreenSaver()
         }
         else
         {
-          while(CheckButtons());
+          //if(CheckButtons());
           
           SetLEDs(0);
           resetTver();
-          
-          response = true;
+          tone(buzzerPIN,100,100);
+          _myStatus = "active";
         }
       }
     }
@@ -273,20 +283,171 @@ void ScreenSaver()
 
 
 
-EthernetClient ethClient;
-PubSubClient client(ethClient);
 
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
+
+
+
+ void goTurnedOff(){
+      _myStatus = "turnedoff";
+    }
+    void goStandby(){
+      _myStatus = "standby";
+    }
+     void goActive(){
+      _myStatus = "active";
+      
+    }
+     void goFailed(){
+      _myStatus = "failed";
+    }
+     void goFinished(){
+      _myStatus = "finished";
+    }
+
+ void additionalStatusCallback(String newStatus){
+        if(newStatus.indexOf("date-")==0){
+          newStatus.replace("date-","");
+          // Serial.println(newStatus);
+          char buf[7];
+          newStatus.toCharArray(buf, 7);
+          char *p = buf;
+          char *str;
+          
+          // newStatus.toCharArray(p, 6);
+        
+          // "201219"
+
+          // Serial.print (buf);
+          // Serial.print (p);
+          for(int i=0;i<6;i++){
+              
+             today[i] = (int)buf[i]-48;
+             
+            
+          }
+          
+          Serial.println();
+          
+          //sendToServer("speed-"+ String(DIFF));
+        } 
+    }
+
+bool sendToServer(String message){
+  
+  String s= "toServer/";
+  s+=clientID;
+  client.publish((char*) s.c_str(), (char*) message.c_str() );
+
+  return true;
+}
+
+ void statusDaemon(bool isCallback=false){
+      if(_myStatus!=oldStatus){//ete poxvela status@
+      if(!isCallback){
+        statusCallback(_myStatus);
+      }
+      oldStatus = _myStatus;
+        sendMyStatus();
+      }
+      
+    }
+
+
+  void subscribeToServer(){
+      String s = "toDevice/";
+      s+=clientID;
+      String  actionDevice= s+String("/action");
+        if(client.subscribe("toDevice/ALLICE")&&client.subscribe((char*) s.c_str())&&client.subscribe((char*) actionDevice.c_str() )){
+           Serial.print("subscribed to Allice and ");
+          Serial.println(s);
+        }
+        
+        
+        
+    }
+
+    void callback(char* topic, byte* payload, unsigned int length) {
+ 
+        
+        payload[length] = '\0';
+
+        String s = "toDevice/";
+        s+=clientID;
+        String  actionDevice= s+String("/action");
+
+
+        if (strcmp(topic,"toDevice/ALLICE")==0) {
+            statusCallback(String((char *)payload));
+        }
+        if (strcmp(topic,s.c_str())==0) {
+          statusCallback(String((char *)payload));
+        }
+        if (strcmp(topic,actionDevice.c_str())==0) {
+          // actionCallback(String((char *)payload));
+        }
+        
+
+        //if(strcmp ("abc", str) == 0))
+
+
+      }
+  
+      // void actionCallback(String action){
+
+        
+      // }
+    
+     void statusCallback(String newStatus){
+      Serial.println(newStatus);
+      bool callbackAlready = true;
+      if(newStatus=="turnedoff"){
+        goTurnedOff();
+      }else if(newStatus=="standby"){
+        goStandby();
+      }else if(newStatus=="active"){
+        goActive();
+      }else if(newStatus=="failed"){
+        goFailed();
+      }else if(newStatus=="finished"){
+        goFinished();
+      }
+     
+       if(newStatus=="status"){
+        sendMyStatus();
+      }
+      
+      additionalStatusCallback(newStatus);
+
+
+      statusDaemon(true);
+      
+    }
+    
+    
+    void sendMyStatus(){
+       sendToServer(_myStatus);
+    }
+
+
+    
+
+ void reconnect() {
+     while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+//    String clientID = "ESP8266Client-";
+//    clientID += String(random(0xffff), HEX);
     // Attempt to connect
-    if (client.connect("arduinoClient")) {
-      Serial.println("connected");
+    if (client.connect(clientID.c_str())) {
+      Serial.print("connected by clentName ");
+      Serial.println(clientID);
+      
       // Once connected, publish an announcement...
-      client.publish("outTopic","hello world");
+      //client.publish("outTopic", "hello world");
       // ... and resubscribe
-      client.subscribe("inTopic");
+      //client.subscribe("inTopic");
+      subscribeToServer();
+      sendToServer("date");//uxarkum enq date vor het stananq daten
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -295,7 +456,7 @@ void reconnect() {
       delay(5000);
     }
   }
-}
+    }
 
 
 // Enter a MAC address for your controller below.
@@ -304,15 +465,6 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 // IPAddress server(172, 16, 0, 2);
 IPAddress server(192, 168, 0, 101);
 
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i=0;i<length;i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-}
 
 
 void setup() {
@@ -419,6 +571,7 @@ void readButtons(){
       if(buttonLastStates[i]!=st){//knopkayi naxkin vichakn enq stugum, ete, sexmaca u naxkinum sexmac
         buttonLastStates[i] = st;  
         if(st==1){
+          tone(buzzerPIN,1000-(111*i),250);
           lastMillis = millis();
           switch (i)
           {
@@ -454,12 +607,17 @@ void readButtons(){
 
 void resetGame(){
     response = false;
+    _myStatus = "standby";
     digitalWrite(DUR,LOW);
     resetTver();
+    
     screenSaverTime =  true;
     for(int i=0;i<3;i++){
         rfidsState[i] = 0;
         rfidWrongTimes[i] = 0;
+    }
+    for(int i=0;i<6;i++){
+      himikvaTver[i] = 0;
     }
     
 }
@@ -500,7 +658,7 @@ void CountDown()
 
 
 bool checkDate(){
-
+  
   for(int i=0;i<6;i++){
     if(himikvaTver[i]!=today[i]){
       return false;
@@ -511,6 +669,7 @@ bool checkDate(){
 
 
 bool checkFigures(){
+  
   for(int i=0;i<RFIDCOUNT;i++){
       tone(buzzerPIN,100,200);
       checkRFID(i);
@@ -524,6 +683,7 @@ bool checkFigures(){
 }
 
 void finishGame(){
+    
     CountDown();
 
     digitalWrite(DUR,HIGH);
@@ -539,116 +699,72 @@ void gameFailed(){
   tone(buzzerPIN,200,300);
   tone(buzzerPIN,250,350);
 }
-void loop() {
 
+void clientLoop(){
+       ArduinoOTA.poll();
   if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
-  // if (!client.connected()) {
-  //   reconnect();
-  // }
-  // client.loop();
+        reconnect();
+       
+      }    
+      client.loop();
 
-    
-    // EVERY_N_MILLISECONDS(500){
-    //   for(int i=0;i<3;i++){
-    //   Serial.print("State of ");
-    //   Serial.print(i);
-    //   Serial.print(" - ");
-    //   Serial.println(rfidsState[i]);
-    //   Serial.print("wrong time ");
-    //   Serial.println(rfidWrongTimes[i]);
-    //   Serial.println();
-    //   Serial.println();
+      statusDaemon();
       
-    //   }
-      
-    // }
-  
-  //    for(int i=0;i<RFIDCOUNT;i++){
-  //     // tone(buzzerPIN,100,200);
-  //     checkRFID(i);
-  // }
+}
+void loop() {
     
+   
+    clientLoop();
 
-    //ScreenSaver();
-
+    if(_myStatus=="standby"){
+        ScreenSaver();
+    }
+    else if(_myStatus!="standby"){
+      readButtons();
     
-    readButtons();
-    // for(int i=0;i<6;i++){
-    //   int st = digitalRead(jamiknopka[i]);
+    for(int i=0;i<6;i++){
+      int st = digitalRead(jamiknopka[i]);
+      digitalWrite(jamiled[i],st);
+    }
 
-    //   digitalWrite(jamiled[i],st);
-
-
-    // }
-    int bt = digitalRead(startButtonPin);
+    int bt = digitalRead(startButtonPin);//glxavor knopken
     digitalWrite(startButtonLedPin,bt);
+
     if(mainButtonLastState!=bt){
       mainButtonLastState = bt;
       if(bt==1){//sexmel en glxavor knopkayin
+
+            tone(buzzerPIN,500,100);
             lastMillis = millis();
             bool checkd = checkDate();
             bool checkfgrs = checkFigures();
             if(checkd&&checkfgrs){
+              _myStatus = "finished";
               finishGame();
             }else{
+              _myStatus = "failed";
               if(checkd){
                   tone(buzzerPIN,500,100);
               }else if(checkfgrs){
                     tone(buzzerPIN,820,100);
+                    delay(100);
+                    tone(buzzerPIN,300,200);
               }
               gameFailed();
             }
       }
     }
     
+    
     if(lastMillis+30000000<millis()){
       resetGame();
       ScreenSaver();
 
     }
+    }
 
 
-  // for (uint8_t reader = 0; reader < NR_OF_READERS; reader++) {
-  //   // Look for new cards
-
-  //   if (mfrc522[reader].PICC_IsNewCardPresent() && mfrc522[reader].PICC_ReadCardSerial()) {
-  //     Serial.print(F("Reader "));
-  //     Serial.print(reader);
-  //     // Show some details of the PICC (that is: the tag/card)
-  //     Serial.print(F(": Card UID:"));
-  //     dump_byte_array(mfrc522[reader].uid.uidByte, mfrc522[reader].uid.size);
-  //     Serial.println();
-  //     Serial.print(F("PICC type: "));
-  //     MFRC522::PICC_Type piccType = mfrc522[reader].PICC_GetType(mfrc522[reader].uid.sak);
-  //     Serial.println(mfrc522[reader].PICC_GetTypeName(piccType));
-
-  //     // Halt PICC
-  //     mfrc522[reader].PICC_HaltA();
-  //     // Stop encryption on PCD
-  //     mfrc522[reader].PCD_StopCrypto1();
-  //   } //if (mfrc522[reader].PICC_IsNewC
-  // } //for(uint8_t reader
-
-
-      // for(int i=0;i<6;i++){
-      //   int luys = luyser[i];
-      //   for(int x=0;x<6;x++){
-      //     digitalWrite(luyser[x],LOW);
-      //   }
-      //   digitalWrite(luyser[i],HIGH);
-      //   for(int j=0;j<10;j++){
-          
-      //     for(int z=0;z<10;z++){
-      //         digitalWrite(tver[z],LOW);
-      //     }
-      //     digitalWrite(tver[j],HIGH);
-      //     delay(400);
-      //   }
-      // }
-
+  
       displayDigits();
 
   }
