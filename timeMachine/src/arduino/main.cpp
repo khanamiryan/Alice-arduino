@@ -83,9 +83,12 @@ void checkRFID(int i){
   uchar str[MAX_LEN];
   // Search card, return card types
   status = rfid.request(PICC_REQIDL, str);
-  if(rfidWrongTimes[i]>3&&rfidsState[i]==1){
-        rfidsState[i]=0;
-        tone(buzzerPIN,300,500);
+  if(rfidWrongTimes[i]>=1){
+    rfidWrongTimes[i] = 1;
+    if(rfidsState[i]==1){
+      rfidsState[i]=0;
+      tone(buzzerPIN,300,500);
+    }
   }
   if (status != MI_OK)
   {
@@ -130,8 +133,6 @@ void checkRFID(int i){
       rfidWrongTimes[i]=0;//reset enq anum qani sxal angama exel
     }
     // Serial.println("Right Card");
-    
-     
     
     
   

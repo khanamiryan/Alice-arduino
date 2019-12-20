@@ -1,13 +1,16 @@
 #include <Arduino.h>
 
 #include <Wire.h>
+#include "I2C_Anything.h"
 
-int tortButtonsLed[] = {2,3,4,5,6,7};
+int tortButtonsLed[] = {2,A3,4,5,6,7};
 int tortButtons[] = {13,12,11,10,9,8};
 int NUMBER_BUTTONS=6;  
+int buzzerpin= 3;
 
 int score = 0;
 
+long gametime = 31000;
 
 const byte ScreenSaverPattern[72] = {
   0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 
@@ -74,6 +77,7 @@ bool CheckButtons()
   {
     if(digitalRead(tortButtons[i]) > 0)
     {
+      tone(buzzerpin,(200+100*i),100);
       return true;
     }
   }
@@ -219,8 +223,11 @@ void CountDown()
 {
   for (int i=1;i<10;i++)
   {
+    
     SetLEDs(255);
+    tone(buzzerpin,(1000-50*i),800/i);
     delay(800/i);
+    
     SetLEDs(0);
     delay(800/i);
   }
@@ -235,24 +242,30 @@ void CountDown()
 */
 void PlayGame()
 {
-  unsigned long endTime = millis() + 31000;
+  unsigned long endTime = millis() + gametime;
   score = 0;
   
   // Debug("endTime: ", endTime);
   // Debug("millis(): ", millis());
 
   long randButton = random(6);  
+  bool first = true;
   while (millis() < endTime)
   {
     // Set the button to press as lit
-    SetLED(HIGH, tortButtonsLed[randButton]);
     
+    SetLED(HIGH, tortButtonsLed[randButton]);
+    if(first){
+      first = false;
+      tone(buzzerpin,(200+100*randButton),100);
+    }
     
     
     // Check to see if the button was pressed
     if(digitalRead(tortButtons[randButton]))
     {
       score ++;
+      tone(buzzerpin,(200+100*randButton),100);
       // Turn off the button
       SetLED(LOW, tortButtonsLed[randButton]);
       
@@ -265,6 +278,9 @@ void PlayGame()
       
       // Values differ, so continue
       randButton = newButton;
+      delay(10);
+      first = true;
+      
     }
   }
   
@@ -272,8 +288,13 @@ void PlayGame()
   SetLEDs(0);
   Serial.print("Ваш результат ");
   Serial.println(score);
-  Wire.write(score);  /* отправляем по запросу строку "Hello NodeMCU" */
   
+  tone(buzzerpin,(1200),1000);
+  delay(1000);
+  score = 0;
+  delay(5000);
+  
+
   // Wait 10 seconds to show the score
  
 }
@@ -289,7 +310,7 @@ void receiveEvent(int howMany) {
 
 // Функция для извлечения любых отправляемых данных от мастера на шину
 void requestEvent() {
- Wire.write(score);  /* отправляем по запросу строку "Hello NodeMCU" */
+  I2C_writeAnything (score);
 }
 
 
@@ -308,9 +329,10 @@ void setup() {
       pinMode(tortButtonsLed[thisPin], OUTPUT);
       pinMode(tortButtons[thisPin], INPUT);
     }
-    
+    pinMode(buzzerpin,OUTPUT);
     Serial.println("Hello ");
-    randomSeed(analogRead(A3));
+    randomSeed(analogRead(A0));
+    tone(buzzerpin,500,100);
 }
 
 void loop() {
