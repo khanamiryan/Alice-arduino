@@ -54,8 +54,9 @@ uchar serNum[5]; // array to store your ID
 
 const uchar rightRfids[3][5] = {//stex lcnel voroshacner@
   {74,11,92,15,18},
-  {201, 12, 224, 139, 174},
-  {73, 88, 174, 139, 52}};
+  {26, 18, 97, 15, 102},
+  {250, 71, 88, 15, 234}
+  };
 
 int rfidsState[3] = {0,0,0};
 int rfidWrongTimes[3] = {0,0,0};
@@ -114,12 +115,7 @@ void checkRFID(int i){
     Serial.println();
     // Serial.println();
     for(int b=0;b<5;b++){
-      // Serial.println();
-      // Serial.print(i);
-      // Serial.print(" ");
-      // Serial.print(serNum[b]);
-      // Serial.print( " with ");
-      // Serial.println(rightRfids[i][b]);
+
       if(serNum[b]!=rightRfids[i][b]){
         rfidWrongTimes[i]++;
         tone(buzzerPIN,1000,1000);
@@ -152,27 +148,34 @@ void resetTver(){
 
 void displayDigits(){
   
-      for(int x=0;x<10;x++){
-            digitalWrite(tver[x],LOW);
-        }
-        for(int x=0;x<6;x++){
-            digitalWrite(luyser[x],LOW);
-        }
-        delay(1);
-      //int n = 0;
-     for(int x=0;x<6;x++){
-        digitalWrite(tver[himikvaTver[x]],HIGH);
-        digitalWrite(luyser[x],HIGH);
-        delay(1);
-        digitalWrite(tver[himikvaTver[x]],LOW);
-        digitalWrite(luyser[x],LOW);
-        delay(1);
-        // n = x;
-        
-        
-     }
+  for(int x=0;x<10;x++){
+        digitalWrite(tver[x],LOW);
+    }
+  for(int x=0;x<6;x++){
+      digitalWrite(luyser[x],LOW);
+  }
+  delay(1);
+  //int n = 0;
+  for(int x=0;x<6;x++){
+    digitalWrite(tver[himikvaTver[x]],HIGH);
+    digitalWrite(luyser[x],HIGH);
+    delay(1);
+    digitalWrite(tver[himikvaTver[x]],LOW);
+    digitalWrite(luyser[x],LOW);
+    delay(1);
+    // n = x;
+    
+    
+  }
 }
-
+void turnoffDigits(){
+  for(int x=0;x<10;x++){
+        digitalWrite(tver[x],LOW);
+    }
+  for(int x=0;x<6;x++){
+      digitalWrite(luyser[x],LOW);
+  }
+}
 
 
 void displayDay(int day){
@@ -290,6 +293,8 @@ void ScreenSaver()
 
  void goTurnedOff(){
       _myStatus = "turnedoff";
+
+    turnoffDigits();
     }
     void goStandby(){
       _myStatus = "standby";
@@ -464,7 +469,7 @@ bool sendToServer(String message){
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 // IPAddress server(172, 16, 0, 2);
-IPAddress server(192, 168, 0, 101);
+IPAddress server(192, 168, 1, 100);
 
 
 
@@ -647,7 +652,7 @@ void CountDown()
     
 
     SetLEDs(255);
-    tone(buzzerPIN,200*i,400/i);
+    tone(buzzerPIN,205*i,450/i);
     delay(800/i);
     SetLEDs(0);
     delay(800/i);
@@ -662,9 +667,11 @@ bool checkDate(){
   
   for(int i=0;i<6;i++){
     if(himikvaTver[i]!=today[i]){
+      sendToServer("dateis-wrong");
       return false;
     }
   }
+  sendToServer("dateis-right");
   return true;
 }
 
@@ -675,6 +682,14 @@ bool checkFigures(){
       tone(buzzerPIN,100,200);
       checkRFID(i);
   }
+  int ch = 0;
+  for(int i=0;i<RFIDCOUNT;i++){
+      if(rfidsState[i]==1){
+          ch++;
+      }
+
+  }
+  sendToServer("lastRightRfids-"+String(ch));
   for(int i=0;i<RFIDCOUNT;i++){
     if(rfidsState[i]!=1){
       return false;
@@ -687,8 +702,19 @@ void finishGame(){
     
     CountDown();
 
-    digitalWrite(DUR,HIGH);
-    tone(buzzerPIN,100,200);
+   
+    tone(buzzerPIN,500,200);
+    delay(200);
+    tone(buzzerPIN,500,200);
+    delay(200);
+    tone(buzzerPIN,500,200);
+    delay(200);
+    tone(buzzerPIN,800,150);
+    delay(150);
+    tone(buzzerPIN,500,500);
+    delay(500);
+    tone(buzzerPIN,600,1000);
+  digitalWrite(DUR,HIGH);
     tone(buzzerPIN,1000,3000);
     delay(5000);
     resetGame();
@@ -738,6 +764,7 @@ void loop() {
             tone(buzzerPIN,500,100);
             lastMillis = millis();
             bool checkd = checkDate();
+            
             bool checkfgrs = checkFigures();
             if(checkd&&checkfgrs){
               _myStatus = "finished";
@@ -756,13 +783,14 @@ void loop() {
       }
     }
     
-    
-    if(lastMillis+30000000<millis()){
-      resetGame();
-      ScreenSaver();
+    if(_myStatus !="standby"){
+      if(lastMillis+300000<millis()){//5 rope
+        resetGame();
+        ScreenSaver();
 
+      }
     }
-    }
+  }
 
 
   

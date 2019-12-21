@@ -4,7 +4,7 @@
 
 #include <ArduinoOTA.h>
 #include <Wire.h>
-
+#include "I2C_Anything.h"
 #include "FastLED.h"
 
 
@@ -113,7 +113,7 @@ void setup() {
   //Wire.write('d');  /* Отправляем "hello Arduino" */
   //Wire.endTransmission();    /* прекращаем передачу */
 }
-
+int c;
 void loop() {
   
   game.run();
@@ -124,7 +124,12 @@ void loop() {
     
       Wire.requestFrom(8, 1); /* запрашиваем и считываем данные с 8 и 1 адреса slave устройства */
       if(Wire.available()){
-          char c = Wire.read();
+          I2C_readAnything (c);
+        
+        if(c<0){
+          c+=256;
+        }
+          
         Serial.print(c);
         if(c>=4){//sa stugel shat ushadir
           game._myStatus = "finished";
@@ -132,8 +137,8 @@ void loop() {
           game._myStatus = "standby";
         }
 
-        game.sendToServer(String('rfidcount-'+c));//srancic mek@
-        game.sendToServer(String('rfidcount-'+c));
+        game.sendToServer("rfidcount-"+String(c));//srancic mek@
+        // game.sendToServer('rfidcoun1t-'+c);
       }
 
       Serial.println();

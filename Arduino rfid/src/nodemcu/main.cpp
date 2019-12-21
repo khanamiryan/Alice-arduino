@@ -4,7 +4,7 @@
 
 #include <ArduinoOTA.h>
 #include <Wire.h>
-
+#include "I2C_Anything.h"
 #include "FastLED.h"
 
 
@@ -114,6 +114,8 @@ void setup() {
   //Wire.endTransmission();    /* прекращаем передачу */
 }
 
+int c;
+
 void loop() {
   
   game.run();
@@ -124,7 +126,12 @@ void loop() {
     
       Wire.requestFrom(8, 1); /* запрашиваем и считываем данные с 8 и 1 адреса slave устройства */
       if(Wire.available()){
-          char c = Wire.read();
+        I2C_readAnything (c);
+        
+        if(c<0){
+          c+=256;
+        }
+          
         Serial.print(c);
         if(c>=8){
           game._myStatus = "finished";

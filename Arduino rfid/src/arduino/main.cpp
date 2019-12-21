@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "FastLED.h"
-
+#include "I2C_Anything.h"
 /*******************************************
 * function:get the id of RFID key
 * RFID   Uno r3
@@ -83,13 +83,15 @@ void checkRFID(int i){
   // Search card, return card types
   
   status = rfid.request(PICC_REQIDL, str);
-  if(rfidWrongTimes[i]>=3&&rfidsState[i]==1){
-        rfidWrongTimes[i] = 3;
-        rfidsState[i]=0;
-      
+  if(rfidWrongTimes[i]>=3){
+      rfidWrongTimes[i] = 3;
+        
+      if(rfidsState[i]==1){
+          rfidsState[i]=0;
         if(mode=="debug"){
           tone(buzzerPIN,300,500);
         }
+      }
   }
   if (status != MI_OK)
   {
@@ -163,7 +165,9 @@ void requestEvent() {
     }
   }
   Serial.println(c);
-  Wire.write(c+'0');
+  I2C_writeAnything (c);
+        
+      
   //Wire.write("2");
   
   // Wire.endTransmission();
