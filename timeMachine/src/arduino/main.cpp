@@ -18,7 +18,7 @@ int jamiled[6] = {45,43,47,49,39,41};
 int buzzerPIN = 13;
 int  startButtonPin = A8;
 int  startButtonLedPin = A11;
-int DUR = 11;//pin of dur
+//int DUR = 12;//pin of dur
 int  lastMillis = 0;
 
 int EthernetPin =15;
@@ -56,8 +56,9 @@ const uchar rightRfids[3][5] = {//stex lcnel voroshacner@
   {74,11,92,15,18},
   {26, 18, 97, 15, 102},
   {250, 71, 88, 15, 234}
+  
   };
-
+//233, 243, 67, 140, 213,
 int rfidsState[3] = {0,0,0};
 int rfidWrongTimes[3] = {0,0,0};
 //rfid.begin(7, 5, 4, 3, 6, 2);     //rfid.begin(IRQ_PIN,SCK_PIN,MOSI_PIN,MISO_PIN,NSS_PIN,RST_PIN)
@@ -70,13 +71,12 @@ int RST_PIN = 29;
 
 int RFIDCOUNT = 3;
 int MOSIS[3] = {37,35,33};
+
+
 void checkRFID(int i){
   
-  
   rfid.begin(IRQ_PIN,SCK_PIN,MOSI_PIN,MOSIS[i],SDA_PIN,RST_PIN);
-
-  
-   delay(100);
+  delay(100);
 
  
   rfid.init();
@@ -84,16 +84,16 @@ void checkRFID(int i){
   uchar str[MAX_LEN];
   // Search card, return card types
   status = rfid.request(PICC_REQIDL, str);
-  if(rfidWrongTimes[i]>=1){
-    rfidWrongTimes[i] = 1;
-    if(rfidsState[i]==1){
-      rfidsState[i]=0;
-      tone(buzzerPIN,300,500);
-    }
-  }
+  // if(rfidWrongTimes[i]>=0){
+  //   rfidWrongTimes[i] = 1;
+  //   if(rfidsState[i]==1){
+  //     rfidsState[i]=0;
+  //     tone(buzzerPIN,300,500);
+  //   }
+  // }
   if (status != MI_OK)
   {
-    rfidWrongTimes[i]++;
+    //rfidWrongTimes[i]++;
     return;
   }
   // Show card type
@@ -126,7 +126,7 @@ void checkRFID(int i){
     if(rfidsState[i]==0){
       tone(buzzerPIN,1000,1000);
       rfidsState[i] = 1;
-      rfidWrongTimes[i]=0;//reset enq anum qani sxal angama exel
+      //rfidWrongTimes[i]=0;//reset enq anum qani sxal angama exel
     }
     // Serial.println("Right Card");
     
@@ -614,7 +614,7 @@ void readButtons(){
 void resetGame(){
     response = false;
     _myStatus = "standby";
-    digitalWrite(DUR,LOW);
+    //digitalWrite(DUR,LOW);
     resetTver();
     
     screenSaverTime =  true;
@@ -714,7 +714,7 @@ void finishGame(){
     tone(buzzerPIN,500,500);
     delay(500);
     tone(buzzerPIN,600,1000);
-  digitalWrite(DUR,HIGH);
+  //digitalWrite(DUR,HIGH);
     tone(buzzerPIN,1000,3000);
     delay(5000);
     resetGame();
