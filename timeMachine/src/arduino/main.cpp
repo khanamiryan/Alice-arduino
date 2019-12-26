@@ -24,7 +24,7 @@ int  lastMillis = 0;
 int EthernetPin =15;
 int EthernetReset =14;//??karoxa petq chga
 
-bool screenSaverTime = true;
+// bool screenSaverTime = true;
 int himikvaTver[6] = {1,1,1,1,1,1};
 int naxordTver[6] = {0,0,0,0,0,0};
 
@@ -617,7 +617,7 @@ void resetGame(){
     //digitalWrite(DUR,LOW);
     resetTver();
     
-    screenSaverTime =  true;
+    // screenSaverTime =  true;
     for(int i=0;i<3;i++){
         rfidsState[i] = 0;
         rfidWrongTimes[i] = 0;
@@ -781,10 +781,9 @@ void loop() {
               gameFailed();
             }
       }
-    }
-    
-    if(_myStatus !="standby"){
+ 
       if(lastMillis+300000<millis()){//5 rope
+        _myStatus = "standby";
         resetGame();
         ScreenSaver();
 

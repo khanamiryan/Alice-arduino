@@ -144,21 +144,21 @@ const unsigned char rightRfids[4][5] = {//stex lcnel voroshacner@
   
   };
 
-int rfidsState[3] = {0,0,};
+int rfidsState[3] = {0,0,0};
 int rfidWrongTimes[3] = {0,0,0};
 int howManyRfidsRight = 0;
 
 
 //voroshel qarteri anunner@
 
-void checkRFID(int i){
+bool checkRFID(int i){
   
   
     rfid.begin(IRQ_PIN,SCK_PIN,MOSI_PIN,MISOS[i],SDA_PIN,RST_PIN);
 
 
 
-  delay(100);
+  delay(50);
   rfid.init();
   unsigned char status;
   unsigned char str[MAX_LEN];
@@ -183,7 +183,7 @@ void checkRFID(int i){
   {
     rfidWrongTimes[i]++;
     states[i]=0;
-    return;
+    return false;
   }
   // Show card type
   // rfid.showCardType(str);
@@ -210,7 +210,7 @@ void checkRFID(int i){
       if(serNum[b]!=rightRfids[i][b]){
         rfidWrongTimes[i]++;
        
-        return;  //sxala rfidi kod@ durs a glais, ete , normala, sharunakuma
+        return false;  //sxala rfidi kod@ durs a glais, ete , normala, sharunakuma
       }
         
     }
@@ -221,8 +221,9 @@ void checkRFID(int i){
     }
     
   }
-  delay(100);
+  delay(50);
   rfid.halt(); //command the card into sleep mode 
+  return true;
 }
 
 void setup() {
@@ -247,9 +248,6 @@ void setup() {
   game._myStatus = myStatus;
   ArduinoOTA.setHostname("kofeaxac");
   ArduinoOTA.begin();
-
-
-  
   
 }
 
@@ -287,8 +285,12 @@ void loop() {
       game._myStatus = "standby";
   }
 
-    for(int i=0;i<rfidscount;i++){
-  checkRFID(i);  
+  // if(game._myStatus == "standby"){
+//todo mtacel, ete erkusn el kofeiaxacn u bajakner@ sra vra en linelu, vonc anel, vor irar chxangaren
+ for(int i=0;i<rfidscount;i++){
+   if(!checkRFID(i)){//ete mi hat@ chka, sax cikl@ break enq anum
+     break;
+   }
   }
   // if(mode=="debug"){
     EVERY_N_SECONDS(5){
@@ -299,6 +301,7 @@ void loop() {
         Serial.println(states[i]);
       }
     }
+
   
   // put your main code here, to run repeatedly:
 }
