@@ -138,9 +138,15 @@ void loop() {
           score+=256;
         }
         // Serial.println(c);
-        EVERY_N_MILLISECONDS(1000){
-          game.sendToServer("score-"+String(score));
-        }
+         if(score!=lastScore){
+          EVERY_N_MILLISECONDS(1000){
+            game.sendToServer("score-"+String(score));
+          }
+         }else{
+           EVERY_N_MILLISECONDS(10000){
+             game.sendToServer("score-"+String(score));
+           }
+         }
       }
     
       //Serial.println();
@@ -157,10 +163,13 @@ void loop() {
         if(lastScore>0){
           if(lastScore>=winnerScore){
             game._myStatus = "finished";
-
           }else{
             game._myStatus = "failed";
           }
+          game.sendMyStatus();
+          delay(5000);
+          lastScore = 0;
+          score = 0;
         }else{
           game._myStatus = "standby";
         }

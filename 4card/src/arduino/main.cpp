@@ -34,10 +34,11 @@ int buzzerPIN=9;
 int states[4] = {0,0,0,0}; //ete chist em hishum, amen depqum kpela qart te che, chisht te sxal karevor chi
 
 String mode = "game";
-
+ const uchar secondkey[5] = {193, 164, 143, 26, 240};
+//193, 164, 143, 26, 240
 const uchar rightRfids[4][5] = {//stex lcnel voroshacner@
   {9, 239, 91, 141, 48},
-  {73, 88, 174, 139, 52},
+  {137, 157, 244, 142, 110},
   {137, 73, 205, 139, 134},
   {25, 3, 2, 140, 148}
 
@@ -110,11 +111,13 @@ void checkRFID(int i){
     for(int b=0;b<5;b++){
 
       if(serNum[b]!=rightRfids[i][b]){
-        rfidWrongTimes[i]++;
-        if(mode=="debug"){
-          tone(buzzerPIN,1200,1000);
-        }
-        return;  //sxala rfidi kod@ durs a glais, ete , normala, sharunakuma
+        
+          rfidWrongTimes[i]++;
+          if(mode=="debug"){
+            tone(buzzerPIN,1200,1000);
+          }
+          return;  //sxala rfidi kod@ durs a glais, ete , normala, sharunakuma
+        
       }
         
     }
@@ -189,13 +192,13 @@ void loop()
   checkRFID(i);  
   }
   // if(mode=="debug"){
-    EVERY_N_SECONDS(5){
-      for(int i=0;i<rfidscount;i++){
-        Serial.print("device ");
-        Serial.print(i);
-        Serial.print(" ");
-        Serial.println(states[i]);
-      }
-    }
+    // EVERY_N_SECONDS(5){
+    //   for(int i=0;i<rfidscount;i++){
+    //     Serial.print("device ");
+    //     Serial.print(i);
+    //     Serial.print(" ");
+    //     Serial.println(states[i]);
+    //   }
+    // }
   //}
 }

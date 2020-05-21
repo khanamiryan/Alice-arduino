@@ -104,7 +104,7 @@ void setup() {
   
   game.setup(myName, STASSID, STAPSK, TCPServer);
   game._myStatus = myStatus;
-  ArduinoOTA.setHostname("dur4");
+  ArduinoOTA.setHostname("cards4");
    ArduinoOTA.begin();
   pinMode(dur,OUTPUT);
   digitalWrite(dur,LOW);
@@ -114,6 +114,7 @@ void setup() {
   //Wire.endTransmission();    /* прекращаем передачу */
 }
 int c;
+int lastrfidCount = 0; 
 void loop() {
   
   game.run();
@@ -137,7 +138,16 @@ void loop() {
           game._myStatus = "standby";
         }
 
-        game.sendToServer("rfidcount-"+String(c));//srancic mek@
+        if(lastrfidCount!=c){
+          game.sendToServer("rfidcount-"+String(c));//srancic mek@
+        }else{
+          EVERY_N_SECONDS(10){
+            game.sendToServer("rfidcount-"+String(c));//srancic mek@
+          }
+        }
+        lastrfidCount = c;
+
+        // game.sendToServer("rfidcount-"+String(c));//srancic mek@
         // game.sendToServer('rfidcoun1t-'+c);
       }
 

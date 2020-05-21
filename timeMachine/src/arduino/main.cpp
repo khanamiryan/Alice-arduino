@@ -6,8 +6,9 @@
 #include <SPI.h>
 
 #include <Ethernet2.h>
-#include <ArduinoOTA.h>
+//#include <ArduinoOTA.h>
 #include <PubSubClient.h>
+#include <avr/wdt.h>
 
 
 
@@ -19,14 +20,15 @@ int buzzerPIN = 13;
 int  startButtonPin = A8;
 int  startButtonLedPin = A11;
 //int DUR = 12;//pin of dur
-int  lastMillis = 0;
+unsigned long  lastMillis = 0;
+unsigned long stanbyModeTime = 600000;
 
 int EthernetPin =15;
 int EthernetReset =14;//??karoxa petq chga
 
 // bool screenSaverTime = true;
 int himikvaTver[6] = {1,1,1,1,1,1};
-int naxordTver[6] = {0,0,0,0,0,0};
+//int naxordTver[6] = {0,0,0,0,0,0};
 
 int buttonLastStates[6] = {0,0,0,0,0,0};
 int mainButtonLastState = 0;
@@ -73,6 +75,14 @@ int RFIDCOUNT = 3;
 int MOSIS[3] = {37,35,33};
 
 
+int clientlooped = 0;
+void resetGame();
+void finishGame();
+void gameFailed();
+
+bool sendToServer(String message);
+
+
 void checkRFID(int i){
   
   rfid.begin(IRQ_PIN,SCK_PIN,MOSI_PIN,MOSIS[i],SDA_PIN,RST_PIN);
@@ -86,14 +96,15 @@ void checkRFID(int i){
   status = rfid.request(PICC_REQIDL, str);
   // if(rfidWrongTimes[i]>=0){
   //   rfidWrongTimes[i] = 1;
-  //   if(rfidsState[i]==1){
-  //     rfidsState[i]=0;
-  //     tone(buzzerPIN,300,500);
-  //   }
+ 
   // }
   if (status != MI_OK)
   {
     //rfidWrongTimes[i]++;
+    //if(rfidsState[i]==1){
+       rfidsState[i]=0;
+       tone(buzzerPIN,300,500);
+     //}
     return;
   }
   // Show card type
@@ -114,20 +125,33 @@ void checkRFID(int i){
     } 
     Serial.println();
     // Serial.println();
+    bool sa = false;
+    
     for(int b=0;b<5;b++){
 
-      if(serNum[b]!=rightRfids[i][b]){
-        rfidWrongTimes[i]++;
-        tone(buzzerPIN,1000,1000);
-        return;  
+      // if(serNum[b]!=rightRfids[i][b]){//ete lriv nuynenq uzum
+      //   //rfidWrongTimes[i]++;
+      //   //tone(buzzerPIN,1000,1000);
+      //   return;  
+      // }
+      for(int y=0;y<3;y++){//ete lyuboy@ lyuboy tex drvi
+        if(serNum[b]==rightRfids[y][b]){
+            // Serial.println("continue exav");
+            sa = true;
+            break;
+        }
+        sa = false;
+
       }
         
     }
-    if(rfidsState[i]==0){
-      tone(buzzerPIN,1000,1000);
-      rfidsState[i] = 1;
+    //if(rfidsState[i]==0){
+      if(sa == true){
+        tone(buzzerPIN,1000,1000);
+        rfidsState[i] = 1;
+      }
       //rfidWrongTimes[i]=0;//reset enq anum qani sxal angama exel
-    }
+    //}
     // Serial.println("Right Card");
     
     
@@ -144,6 +168,9 @@ void resetTver(){
   for(int i=0;i<6;i++){
     himikvaTver[i] = 1;
   }
+  day = 1;
+  month = 1;
+  year = 1;
 }
 
 void displayDigits(){
@@ -228,7 +255,7 @@ void SetLEDs (int pattern)
 */
 bool CheckButtons()
 {
-  for (int i=0; i< 6; i++)
+  for (int i=0; i<6; i++)
   {
     if(digitalRead(jamiknopka[i]) > 0)
     {
@@ -243,13 +270,13 @@ bool CheckButtons()
 
 bool response = false;
 
-void ScreenSaver()
+void ScreenSaver(int time = 350)
 {
   // int screenSaver = random(3);
   
   
-  if (_myStatus=="standby")
-  {
+  // if (_myStatus=="standby")
+  // {
     
     
     EVERY_N_MILLISECONDS(350){
@@ -260,10 +287,11 @@ void ScreenSaver()
     for(int i=0 ; i < 100 ; i++)
     {
       int rand = random(256);
-      displayDigits();
-      clientLoop();
+        displayDigits();
+        clientLoop();
       for (int loop = 0; loop<10; loop++)
       {   
+ 
         if (!CheckButtons())
         {
           EVERY_N_MILLISECONDS(100){
@@ -274,15 +302,14 @@ void ScreenSaver()
         {
           //if(CheckButtons());
           
-          SetLEDs(0);
-          resetTver();
-          tone(buzzerPIN,100,100);
+          
           _myStatus = "active";
+          return;
         }
       }
     }
     
-  }
+  //}
 }
 
 
@@ -298,26 +325,40 @@ void ScreenSaver()
     }
     void goStandby(){
       _myStatus = "standby";
+      resetGame();
+
     }
      void goActive(){
       _myStatus = "active";
-      
+      SetLEDs(0);
+      resetTver();
+      tone(buzzerPIN,100,100);
     }
      void goFailed(){
-      _myStatus = "failed";
+       if(_myStatus!="failed"){
+        _myStatus = "failed";
+        Serial.println("failed");
+        gameFailed();
+       }
     }
      void goFinished(){
-      _myStatus = "finished";
+       if(_myStatus!="finished"){
+          _myStatus = "finished";
+          // Serial.println("goFinishedym enq");
+          finishGame();
+       }
+      
     }
 
  void additionalStatusCallback(String newStatus){
         if(newStatus.indexOf("date-")==0){
           newStatus.replace("date-","");
+          sendToServer("innerDate-"+newStatus);
           // Serial.println(newStatus);
           char buf[7];
           newStatus.toCharArray(buf, 7);
           char *p = buf;
-          char *str;
+          // char *str;
           
           // newStatus.toCharArray(p, 6);
         
@@ -338,34 +379,36 @@ void ScreenSaver()
         } 
     }
 
-bool sendToServer(String message){
+String sendS = "toServer/"+clientID;
+bool sendToServer(String message){  
   
-  String s= "toServer/";
-  s+=clientID;
-  client.publish((char*) s.c_str(), (char*) message.c_str() );
-
+  client.publish(sendS.c_str(), message.c_str() );
+  
   return true;
 }
 
  void statusDaemon(bool isCallback=false){
       if(_myStatus!=oldStatus){//ete poxvela status@
-      if(!isCallback){
-        statusCallback(_myStatus);
-      }
-      oldStatus = _myStatus;
+        // Serial.print("status changed from ");
+        // Serial.print(oldStatus);
+        // Serial.print(" to ");
+        // Serial.println(_myStatus);
+        if(!isCallback){
+          statusCallback(_myStatus);
+        }
+        oldStatus = _myStatus;
         sendMyStatus();
       }
       
     }
 
-
+  String subscribeS = "toDevice/"+clientID;
+  String  actionDevice= subscribeS+String("/action");
   void subscribeToServer(){
-      String s = "toDevice/";
-      s+=clientID;
-      String  actionDevice= s+String("/action");
-        if(client.subscribe("toDevice/ALLICE")&&client.subscribe((char*) s.c_str())&&client.subscribe((char*) actionDevice.c_str() )){
-           Serial.print("subscribed to Allice and ");
-          Serial.println(s);
+      
+        if(client.subscribe("toDevice/ALLICE")&&client.subscribe((char*) subscribeS.c_str())&&client.subscribe((char*) actionDevice.c_str() )){
+           Serial.print("subscribed to ALLICE and ");
+          Serial.println(subscribeS);
         }
         
         
@@ -377,15 +420,13 @@ bool sendToServer(String message){
         
         payload[length] = '\0';
 
-        String s = "toDevice/";
-        s+=clientID;
-        String  actionDevice= s+String("/action");
+      
 
 
         if (strcmp(topic,"toDevice/ALLICE")==0) {
             statusCallback(String((char *)payload));
         }
-        if (strcmp(topic,s.c_str())==0) {
+        if (strcmp(topic,subscribeS.c_str())==0) {
           statusCallback(String((char *)payload));
         }
         if (strcmp(topic,actionDevice.c_str())==0) {
@@ -402,10 +443,10 @@ bool sendToServer(String message){
 
         
       // }
-    
+      // bool callbackAlready;
      void statusCallback(String newStatus){
-      Serial.println(newStatus);
-      bool callbackAlready = true;
+      //Serial.println(newStatus);
+      callbackAlready = true;
       if(newStatus=="turnedoff"){
         goTurnedOff();
       }else if(newStatus=="standby"){
@@ -454,12 +495,14 @@ bool sendToServer(String message){
       //client.subscribe("inTopic");
       subscribeToServer();
       sendToServer("date");//uxarkum enq date vor het stananq daten
+      
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
+      
     }
   }
     }
@@ -475,6 +518,7 @@ IPAddress server(192, 168, 1, 100);
 
 void setup() {
 
+  wdt_enable(WDTO_8S);
   Serial.begin(9600); // Initialize serial communications with the PC
   while (!Serial);    // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
 
@@ -491,7 +535,7 @@ void setup() {
     pinMode(jamiknopka[i],OUTPUT);
   }
   for(int i=0;i<6;i++){
-  pinMode(jamiled[i],INPUT);
+    pinMode(jamiled[i],INPUT);
   }
   
   pinMode(startButtonPin,INPUT);
@@ -516,8 +560,8 @@ void setup() {
    Ethernet.begin(mac);
 
   // // start the OTEthernet library with internal (flash) based storage
-   ArduinoOTA.begin(Ethernet.localIP(), "Arduino", "password", InternalStorage);
-
+  // ArduinoOTA.begin(Ethernet.localIP(), "Arduino", "password", InternalStorage);
+   
 }
 
 void dayDown(){
@@ -568,17 +612,21 @@ void yearDown(){
 
 
 
-
+int st;
 void readButtons(){
    for(int i=0;i<6;i++){
-      int st = digitalRead(jamiknopka[i]);
-
-      digitalWrite(jamiled[i],st);
+      st = digitalRead(jamiknopka[i]);
+      if(st==1){
+        digitalWrite(jamiled[i],LOW);
+      }else{
+        digitalWrite(jamiled[i],HIGH);
+      }
       if(buttonLastStates[i]!=st){//knopkayi naxkin vichakn enq stugum, ete, sexmaca u naxkinum sexmac
         buttonLastStates[i] = st;  
+        lastMillis = millis();
         if(st==1){
           tone(buzzerPIN,1000-(111*i),250);
-          lastMillis = millis();
+          
           switch (i)
           {
           case 0:
@@ -613,7 +661,7 @@ void readButtons(){
 
 void resetGame(){
     response = false;
-    _myStatus = "standby";
+    //_myStatus = "standby";
     //digitalWrite(DUR,LOW);
     resetTver();
     
@@ -622,9 +670,7 @@ void resetGame(){
         rfidsState[i] = 0;
         rfidWrongTimes[i] = 0;
     }
-    for(int i=0;i<6;i++){
-      himikvaTver[i] = 0;
-    }
+
     
 }
 
@@ -656,7 +702,7 @@ void CountDown()
     delay(800/i);
     SetLEDs(0);
     delay(800/i);
-    
+    wdt_reset();//Watchdog
   }
   
   delay(500);
@@ -665,30 +711,39 @@ void CountDown()
 
 bool checkDate(){
   
+   String wrongDate = "";
+    for(int u = 0;u<6;u++){
+      wrongDate+=String(himikvaTver[u]);
+    }
+
+
   for(int i=0;i<6;i++){
-    if(himikvaTver[i]!=today[i]){
-      sendToServer("dateis-wrong");
+    if(himikvaTver[i]!=today[i]){   
+     sendToServer("dateis-wrong-"+wrongDate);
       return false;
     }
   }
+  sendToServer("dateis-wrong-"+wrongDate);
   sendToServer("dateis-right");
   return true;
 }
 
-
+int ch;
 bool checkFigures(){
   
   for(int i=0;i<RFIDCOUNT;i++){
       tone(buzzerPIN,100,200);
       checkRFID(i);
   }
-  int ch = 0;
+  ch = 0;
   for(int i=0;i<RFIDCOUNT;i++){
       if(rfidsState[i]==1){
           ch++;
       }
 
   }
+  
+  
   sendToServer("lastRightRfids-"+String(ch));
   for(int i=0;i<RFIDCOUNT;i++){
     if(rfidsState[i]!=1){
@@ -699,25 +754,51 @@ bool checkFigures(){
 }
 
 void finishGame(){
-    
+    // Serial.println("mtel em finish game");
+    _myStatus = "finished";
+    sendMyStatus();
     CountDown();
 
    
     tone(buzzerPIN,500,200);
     delay(200);
     tone(buzzerPIN,500,200);
+    displayDigits();
     delay(200);
+    displayDigits();
+    // ScreenSaver(350);
     tone(buzzerPIN,500,200);
     delay(200);
     tone(buzzerPIN,800,150);
+    displayDigits();
+    // ScreenSaver(200);
     delay(150);
     tone(buzzerPIN,500,500);
+    
     delay(500);
+    //ScreenSaver(150);
     tone(buzzerPIN,600,1000);
   //digitalWrite(DUR,HIGH);
     tone(buzzerPIN,1000,3000);
-    delay(5000);
-    resetGame();
+
+    delay(3000);
+    tone(buzzerPIN,1100,15000);
+    // ScreenSaver(100);
+    wdt_reset();//Watchdog
+    delay(3000);
+    wdt_reset();//Watchdog
+    delay(3000);
+    wdt_reset();//Watchdog
+    delay(3000);
+    wdt_reset();//Watchdog
+    delay(3000);
+    wdt_reset();//Watchdog
+    delay(3000);
+    
+    
+    
+    _myStatus = "standby";
+    //resetGame();
     
 }
 void gameFailed(){
@@ -728,72 +809,121 @@ void gameFailed(){
 }
 
 void clientLoop(){
-       ArduinoOTA.poll();
-  if (!client.connected()) {
-        reconnect();
-       
-      }    
-      client.loop();
-
-      statusDaemon();
+  if(clientlooped==0){
+    clientlooped = 1;
+    // ArduinoOTA.poll();
+    if (!client.connected()) {
+      reconnect();
+    }    
+    client.loop();
+  }
+  statusDaemon();
+  wdt_reset();//Watchdog
+  
       
 }
+
+unsigned long now;
+int stu;
+int btu;
+
 void loop() {
+  // EVERY_N_SECONDS(15){
+  // Serial.print("Status - ");
+  //   Serial.println(_myStatus);
+  // }
+
+    clientlooped = 0;
     
-   
     clientLoop();
 
+    displayDigits();
+    readButtons();
     if(_myStatus=="standby"){
         ScreenSaver();
     }
     else if(_myStatus!="standby"){
-      readButtons();
-    
-    for(int i=0;i<6;i++){
-      int st = digitalRead(jamiknopka[i]);
-      digitalWrite(jamiled[i],st);
-    }
+      if(_myStatus=="failed"){
+          _myStatus="active";
+          oldStatus = "active";//hack
+      }
+      
+      
+      
+      for(int i=0;i<6;i++){
+        stu = digitalRead(jamiknopka[i]);
+        if(st==1){
+          digitalWrite(jamiled[i],LOW);
+        }else{
+          digitalWrite(jamiled[i],HIGH);
+        }
+        
+      }
 
-    int bt = digitalRead(startButtonPin);//glxavor knopken
-    digitalWrite(startButtonLedPin,bt);
+      btu = digitalRead(startButtonPin);//glxavor knopken
+      
+      if(btu==1){
+          digitalWrite(startButtonLedPin,LOW);
+      }else{
+          digitalWrite(startButtonLedPin,HIGH);
+      }
 
-    if(mainButtonLastState!=bt){
-      mainButtonLastState = bt;
-      if(bt==1){//sexmel en glxavor knopkayin
+      if(mainButtonLastState!=btu){
+        mainButtonLastState = btu;
+        lastMillis = millis();
+        //Serial.println("newLastmillis");
+        if(btu==1){//sexmel en glxavor knopkayin
 
-            tone(buzzerPIN,500,100);
-            lastMillis = millis();
-            bool checkd = checkDate();
-            
-            bool checkfgrs = checkFigures();
-            if(checkd&&checkfgrs){
-              _myStatus = "finished";
-              finishGame();
-            }else{
-              _myStatus = "failed";
-              if(checkd){
-                  tone(buzzerPIN,500,100);
-              }else if(checkfgrs){
-                    tone(buzzerPIN,820,100);
-                    delay(100);
-                    tone(buzzerPIN,300,200);
+              tone(buzzerPIN,500,100);
+              
+              bool checkd = checkDate();
+               
+              bool checkfgrs = checkFigures();
+              if(checkd&&checkfgrs){
+                //_myStatus = "finished";
+                //Serial.println("finished -a ");
+                goFinished();
+              }else{
+                _myStatus = "failed";
+                // Serial.print("failed - ");
+                // Serial.print("checkd is ");
+                // Serial.print(checkd);
+                // Serial.print(", checkgigures - ");
+                // Serial.println(checkfgrs);
+                if(checkd){
+                    tone(buzzerPIN,500,100);
+                }else if(checkfgrs){
+                      tone(buzzerPIN,820,100);
+                      delay(100);
+                      tone(buzzerPIN,300,200);
+                }
+              
               }
-              gameFailed();
-            }
+        }
+  
       }
- 
-      if(lastMillis+300000<millis()){//5 rope
-        _myStatus = "standby";
-        resetGame();
-        ScreenSaver();
+      
+      now= millis();
+   
+      if(now-lastMillis>stanbyModeTime){
 
-      }
-    }
+        //  Serial.print("lastMillis - ");
+          // /Serial.println(lastMillis);
+          // Serial.print("lastMillis + ");
+          // Serial.println(lastMillis+1000*60*5);
+          // Serial.print("now - ");
+          // Serial.println(now);
+          Serial.print("5rope");
+          _myStatus = "standby";
+          lastMillis =  now;
+          //resetGame();
+          // ScreenSaver();
+        }
   }
 
 
   
-      displayDigits();
+      
 
   }
 

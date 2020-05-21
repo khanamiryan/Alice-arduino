@@ -8,7 +8,7 @@
 #include "FastLED.h"
 
 
-
+#include "ESPRotary.h";
 
 
 #ifndef STASSID
@@ -96,10 +96,11 @@ class LGame: public Game_A{
 LGame game;
 
 int reading = 0;
-int lowest = -120;
-int highest = 2000;
+int lowest = 0;
+int whenItsOpen = 150;
+int highest = 180;
 
-int whenItsOpen = 1500;
+
 
 int changeamnt = 1;
 
@@ -109,8 +110,8 @@ unsigned long lastTime;
 
 
 // Pin definitions
-const int pinA = D3;
-const int pinB = D4;
+const int pinA = D5;
+const int pinB = D6;
 
 // Storing the readings
 
@@ -119,13 +120,44 @@ boolean encB;
 boolean lastA = false;
 
 
+
+/////////////////////////////////////////////////////////////////
+
+#define ROTARY_PIN1	D5
+#define ROTARY_PIN2	D6
+
+/////////////////////////////////////////////////////////////////
+
+ESPRotary r = ESPRotary(ROTARY_PIN1, ROTARY_PIN2);
+
+/////////////////////////////////////////////////////////////////
+
+void rotate(ESPRotary& r) {
+   //Serial.println(r.getPosition());
+   if (reading + changeamnt <= highest)
+        {
+        Serial.print("now - ");
+        Serial.println(reading);
+        reading = reading + (changeamnt*4); 
+      }
+   
+}
+
+
+void showDirection(ESPRotary& r) {
+  Serial.println(r.directionToString(r.getDirection()));
+}
+
 void setup() {
 
   Serial.begin(115200); /* открываем серийный порт для дебаггинга */
 
-  pinMode(pinA, INPUT_PULLUP);
-  pinMode(pinB, INPUT_PULLUP);
+  // pinMode(pinA, INPUT_PULLUP);
+  // pinMode(pinB, INPUT_PULLUP);
 
+  r.setChangedHandler(rotate);
+  //r.setLeftRotationHandler(showDirection);
+  r.setRightRotationHandler(showDirection);
 
 
   // Set up the timing of the polling
@@ -143,39 +175,40 @@ void setup() {
   //Wire.write('d');  /* Отправляем "hello Arduino" */
   //Wire.endTransmission();    /* прекращаем передачу */
 }
+
+
+
+/////////////////////////////////////////////////////////////////
+
+
+
+
 int c;
 int over = 1;
+int lastrfidCount = 0;
 void loop() {
-  
+  r.loop();
   game.run();
   ArduinoOTA.handle();
 
-  EVERY_N_MILLISECONDS(10){
-    encA = digitalRead(pinA);
-    encB = digitalRead(pinB);
-    if ((!encA)||(!encB))
-    {
-    if (reading + changeamnt <= highest)
-        {
-        Serial.print("now - ");
-        Serial.println(reading);
-        reading = reading + (changeamnt*2); 
-        }
-    }
-    // store reading of A and millis for next loop
-    
-  }
 
-  EVERY_N_MILLISECONDS(50){
+
+  EVERY_N_MILLISECONDS(10){
+    if(reading>=whenItsOpen){
       if(reading>lowest){
-        reading-=1;
+        reading-=20;
       }
+    }else{
+      if(reading>lowest){
+      reading-=1;
+      }
+    }
   }
 
   
   if(reading>=whenItsOpen&&over!=1){
      // game._myStatus = "kofeaxac-over";
-      over = 1//avartel e kofeiaaxac@, el mi uxarki
+      over = 1;//avartel e kofeiaaxac@, el mi uxarki
       game.sendToServer("kofeaxac-over");//srancic mek@
   }
      
@@ -200,13 +233,21 @@ void loop() {
         }
           
         Serial.print(c);
+        
         if(c>=3){//sa stugel shat ushadir
           game._myStatus = "finished";
         }else{
           game._myStatus = "standby";
         }
-
-        game.sendToServer("rfidcount-"+String(c));//srancic mek@
+        
+        if(lastrfidCount!=c){
+          game.sendToServer("rfidcount-"+String(c));//srancic mek@
+        }else{
+          EVERY_N_SECONDS(10){
+            game.sendToServer("rfidcount-"+String(c));//srancic mek@
+          }
+        }
+        lastrfidCount = c;
         // game.sendToServer('rfidcoun1t-'+c);
       }
 

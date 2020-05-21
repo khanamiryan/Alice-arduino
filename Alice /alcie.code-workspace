@@ -1,51 +1,47 @@
 {
 	"folders": [
 		{
-			"path": "."
-		},
-		{
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/libraries"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/libraries"
 		},
 		{
 			"name": "Tort",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/Tort"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/Tort"
 		},
 		{
 			"name": "timeMachine",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/timeMachine"
-		},
-		{
-			"name": "Arduino rfid",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/Arduino rfid"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/timeMachine"
 		},
 		{
 			"name": "4card",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/4card"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/4card"
 		},
 		{
 			"name": "Kofeiaxac",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/Kofeiaxac"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/Kofeiaxac"
 		},
 		{
 			"name": "rele",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/rele"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/rele"
 		},
 		{
 			"name": "bajakner",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/bajakner"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/bajakner"
 		},
 		{
 			"name": "darak2",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/darak2"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/darak2"
 		},
 		{
 			"name": "TnakUAstichan",
-			"path": "/Users/Ashot/Desktop/alice/arduino_code/TnakUAstichan"
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/TnakUAstichan"
+		},
+		{
+			"path": "/Volumes/Macintosh HD/Users/Ashot/Desktop/alice/arduino_code/9game"
 		}
 	],
 	"settings": {
 		"terminal.integrated.env.osx": {
-			"PATH": "/Users/Ashot/.platformio/penv/bin:/Users/Ashot/.platformio/penv:/usr/local/opt/sqlite/bin:/usr/local/sbin:/usr/local/opt/openssl/bin:/usr/local/bin:/Applications/MAMP/bin/php/php5.5.3/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin",
+			"PATH": "/Users/khanamiryan/.platformio/penv/bin:/Users/khanamiryan/.platformio/penv:/usr/local/opt/sqlite/bin:/usr/local/sbin:/usr/local/opt/openssl/bin:/usr/local/bin:/Applications/MAMP/bin/php/php5.5.3/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin",
 			"PLATFORMIO_CALLER": "vscode"
 		},
 		"files.associations": {

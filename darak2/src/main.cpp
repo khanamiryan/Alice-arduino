@@ -40,6 +40,7 @@ String myStatus = "standby"; //turnedoff, standby, active, failed, finished
 String oldStatus;
 
 int DARAK =D5;
+int DARAKNERQEVI =D6;
 int PATUHAN = D1;
 int DUR = D4;
 
@@ -80,10 +81,15 @@ class LGame: public Game_A{
           digitalWrite(D5,st);
           Serial.println("D5");
         }
+        if(newStatus=="D6"){
+          digitalWrite(D6,st);
+          
+        }
         if(newStatus=="DARAK"){
-          digitalWrite(DARAK,st);
-          
-          
+          digitalWrite(DARAK,st); 
+        }
+        if(newStatus=="DARAKNERQEVI"){
+          digitalWrite(DARAKNERQEVI,st); 
         }
         if(newStatus=="PATUHAN"){
           digitalWrite(PATUHAN,st);
@@ -144,10 +150,12 @@ void setup() {
   pinMode(DARAK,OUTPUT);
   pinMode(PATUHAN,OUTPUT);
   pinMode(DUR,OUTPUT);
+  pinMode(DARAKNERQEVI,OUTPUT);
 
   digitalWrite(DARAK,stateOff);
   digitalWrite(PATUHAN,stateOff);
   digitalWrite(DUR,stateOff);
+  digitalWrite(DARAKNERQEVI,stateOff);
   // Set up the timing of the polling
 
   game.setup(myName, STASSID, STAPSK, TCPServer);

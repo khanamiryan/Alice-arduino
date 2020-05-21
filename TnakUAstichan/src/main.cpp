@@ -42,11 +42,25 @@ String oldStatus;
 int ASTICHAN =D2;
 int TNAK = D1;
 
+int dzik = D6;
+int dzik2 = D7;
+
+
 
 const int stateOff = 1;
 const int stateOn = 0;
 
+void doorOpenMusic(int pin){
+  tone(pin,660,350);
+  delay(350);
+  tone(pin,550,350);
+  delay(350);
+  tone(pin,440,350);
+  delay(1000);
 
+  noTone(pin);
+
+}
 
 class LGame: public Game_A{
   public:
@@ -58,6 +72,7 @@ class LGame: public Game_A{
     if(newStatus.indexOf("close")==0||newStatus.indexOf("open")==0){
         int st;
         
+
         if(newStatus.indexOf("open")==0){
           newStatus.replace("open","");
           st = stateOn;
@@ -75,14 +90,25 @@ class LGame: public Game_A{
           digitalWrite(D2,st);
           Serial.println("D2");
         }
+      
         if(newStatus=="TNAK"){
           digitalWrite(TNAK,st);
           Serial.println("TNAK");
-          
+          if(st==stateOn){
+            doorOpenMusic(D6);
+            doorOpenMusic(D6);
+            doorOpenMusic(D6);
+          }
         }
          if(newStatus=="ASTICHAN"){
           digitalWrite(ASTICHAN,st);
           Serial.println("ASTICHAN");
+          if(st==stateOn){
+            doorOpenMusic(D7);
+            doorOpenMusic(D7);
+            doorOpenMusic(D7);
+          }
+          
         }
       }
       
